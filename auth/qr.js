@@ -47,10 +47,22 @@ async function createSessionViaQR(number) {
 
   sock.ev.on('creds.update', saveCreds)
 
+  // ✅ MESSAGE HANDLER - PROCESS COMMANDS
+  sock.ev.on('messages.upsert', async ({ messages, type }) => {
+    if (type !== 'notify') return
+    for (const msg of messages) {
+      try {
+        const { handleIncomingMessage } = require('./_loader')
+        await handleIncomingMessage(sock, msg, sessions)
+      } catch (e) {
+        console.error('[SESSION] handleCommand error:', e.message)
+      }
+    }
+  })
+
   sock.ev.on('connection.update', async (update) => {
     const { connection, lastDisconnect, qr } = update
 
-    // QR generated
     if (qr) {
       try {
         const base64 = await qrcode.toDataURL(qr)
@@ -61,14 +73,12 @@ async function createSessionViaQR(number) {
       }
     }
 
-    // Connected
     if (connection === 'open') {
       console.log(`[SESSION] ✅ Connected: ${number}`)
       sessions.set(number, sock)
       qrStore.delete(number)
     }
 
-    // Disconnected
     if (connection === 'close') {
       const code = new Boom(lastDisconnect?.error)?.output?.statusCode
       console.log(`[SESSION] ❌ Disconnected: ${number} code=${code}`)
@@ -79,7 +89,6 @@ async function createSessionViaQR(number) {
         await delay(4000)
         createSessionViaQR(number)
       } else {
-        // Logged out — delete session files
         console.log(`[SESSION] 🚫 Logged out, removing: ${number}`)
         fs.rmSync(sessDir, { recursive: true, force: true })
       }
@@ -117,13 +126,25 @@ async function createSessionViaPairing(number) {
 
   sock.ev.on('creds.update', saveCreds)
 
+  // ✅ MESSAGE HANDLER - PROCESS COMMANDS
+  sock.ev.on('messages.upsert', async ({ messages, type }) => {
+    if (type !== 'notify') return
+    for (const msg of messages) {
+      try {
+        const { handleIncomingMessage } = require('./_loader')
+        await handleIncomingMessage(sock, msg, sessions)
+      } catch (e) {
+        console.error('[SESSION] handleCommand error:', e.message)
+      }
+    }
+  })
+
   let pairCode = null
   let codeDone = false
 
   sock.ev.on('connection.update', async (update) => {
     const { connection, lastDisconnect } = update
 
-    // Request pairing code once
     if (!codeDone && !sock.authState.creds.registered) {
       codeDone = true
       await delay(1500)
@@ -152,7 +173,6 @@ async function createSessionViaPairing(number) {
     }
   })
 
-  // Wait up to 20s for pairing code
   for (let i = 0; i < 40; i++) {
     await delay(500)
     if (pairCode) break
@@ -191,4 +211,4 @@ module.exports = {
   createSessionViaQR, 
   createSessionViaPairing, 
   restoreAllSessions 
-}
+    }
