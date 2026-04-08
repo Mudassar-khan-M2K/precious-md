@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.js"
   },
-  "engines": {           // ✅ FIX #1: Node version specified
+  "engines": {
     "node": "20.x"
   },
   "dependencies": {
@@ -17,7 +17,6 @@
     "express": "^4.18.2",
     "fluent-ffmpeg": "^2.1.2",
     "fs-extra": "^11.2.0",
-    // "mongo-baileys": "^1.1.1",  // ✅ FIX #2: REMOVED (didn't exist)
     "mongodb": "^5.9.0",
     "node-fetch": "^2.7.0",
     "pino": "^8.17.2",
@@ -25,4 +24,4 @@
     "qrcode": "^1.5.3",
     "yt-dlp-exec": "^3.0.2"
   }
-  }
+}
