@@ -11,15 +11,14 @@ const pino = require('pino')
 const fs = require('fs')
 const path = require('path')
 const qrcode = require('qrcode')
+const { handleCommand } = require('./commands')  // You need to create this
 
 const SESSIONS_DIR = path.join(__dirname, '..', 'sessions')
 const logger = pino({ level: 'silent' })
 
-// Global maps - exported so other files can read them
-const sessions = new Map()   // number → sock
-const qrStore  = new Map()   // number → base64 QR
+const sessions = new Map()
+const qrStore = new Map()
 
-// ── CREATE / RESTORE A SESSION ──
 async function createSessionViaQR(number) {
   if (sessions.has(number)) {
     console.log(`[SESSION] Already connected: ${number}`)
@@ -50,7 +49,6 @@ async function createSessionViaQR(number) {
   sock.ev.on('connection.update', async (update) => {
     const { connection, lastDisconnect, qr } = update
 
-    // QR generated
     if (qr) {
       try {
         const base64 = await qrcode.toDataURL(qr)
@@ -61,14 +59,12 @@ async function createSessionViaQR(number) {
       }
     }
 
-    // Connected
     if (connection === 'open') {
       console.log(`[SESSION] ✅ Connected: ${number}`)
       sessions.set(number, sock)
       qrStore.delete(number)
     }
 
-    // Disconnected
     if (connection === 'close') {
       const code = new Boom(lastDisconnect?.error)?.output?.statusCode
       console.log(`[SESSION] ❌ Disconnected: ${number} code=${code}`)
@@ -79,20 +75,17 @@ async function createSessionViaQR(number) {
         await delay(4000)
         createSessionViaQR(number)
       } else {
-        // Logged out — delete session files
         console.log(`[SESSION] 🚫 Logged out, removing: ${number}`)
         fs.rmSync(sessDir, { recursive: true, force: true })
       }
     }
   })
 
-  // Listen for commands on every message - Using _loader instead of commands
   sock.ev.on('messages.upsert', async ({ messages, type }) => {
     if (type !== 'notify') return
     for (const msg of messages) {
       try {
-        const { handleIncomingMessage } = require('../plugins/_loader')
-        await handleIncomingMessage(sock, msg, sessions)
+        await handleCommand(msg, sock, sessions)
       } catch (e) {
         console.error('[SESSION] handleCommand error:', e.message)
       }
@@ -103,7 +96,6 @@ async function createSessionViaQR(number) {
   return sock
 }
 
-// ── PAIRING CODE FLOW ──
 async function createSessionViaPairing(number) {
   if (sessions.has(number)) {
     throw new Error('Number already connected!')
@@ -136,7 +128,6 @@ async function createSessionViaPairing(number) {
   sock.ev.on('connection.update', async (update) => {
     const { connection, lastDisconnect } = update
 
-    // Request pairing code once
     if (!codeDone && !sock.authState.creds.registered) {
       codeDone = true
       await delay(1500)
@@ -152,13 +143,11 @@ async function createSessionViaPairing(number) {
       console.log(`[SESSION] ✅ Paired: ${number}`)
       sessions.set(number, sock)
 
-      // Attach command listener after pairing
       sock.ev.on('messages.upsert', async ({ messages, type }) => {
         if (type !== 'notify') return
         for (const msg of messages) {
           try {
-            const { handleIncomingMessage } = require('../plugins/_loader')
-            await handleIncomingMessage(sock, msg, sessions)
+            await handleCommand(msg, sock, sessions)
           } catch (e) {
             console.error('[SESSION] handleCommand error:', e.message)
           }
@@ -178,7 +167,6 @@ async function createSessionViaPairing(number) {
     }
   })
 
-  // Wait up to 20s for pairing code
   for (let i = 0; i < 40; i++) {
     await delay(500)
     if (pairCode) break
@@ -188,7 +176,6 @@ async function createSessionViaPairing(number) {
   return pairCode
 }
 
-// ── RESTORE ALL SAVED SESSIONS ON STARTUP ──
 async function restoreAllSessions() {
   if (!fs.existsSync(SESSIONS_DIR)) {
     fs.mkdirSync(SESSIONS_DIR, { recursive: true })
@@ -211,10 +198,4 @@ async function restoreAllSessions() {
   }
 }
 
-module.exports = { 
-  sessions, 
-  qrStore, 
-  createSessionViaQR, 
-  createSessionViaPairing, 
-  restoreAllSessions 
-    }
+module.exports = { sessions, qrStore, createSessionViaQR, createSessionViaPairing, restoreAllSessions }
