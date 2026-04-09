@@ -1,20 +1,25 @@
+const { isAdmin, isBotAdmin } = require('../../utils/group-helper')
+
 module.exports = {
   name: 'demote',
-  alias: [],
+  alias: ['removeadmin'],
   category: 'group',
-  reactEmoji: '⭐',
-  async execute(sock, msg, { from, args, sender }) {
-    const groupMeta = await sock.groupMetadata(from)
-    const isAdmin = groupMeta.participants.find(p => p.id === sender)?.admin
-    if (!isAdmin) return sock.sendMessage(from, { text: '❌ Admin only.' }, { quoted: msg })
+  reactEmoji: '⬇️',
+  desc: 'Remove admin rights',
+  async execute(sock, msg, { from, sender, args }) {
+    if (!from.endsWith('@g.us')) return sock.sendMessage(from, { text: '❌ Groups only!' })
+    
+    if (!await isAdmin(sock, from, sender)) return sock.sendMessage(from, { text: '❌ Admin only!' })
+    if (!await isBotAdmin(sock, from)) return sock.sendMessage(from, { text: '❌ I need admin rights!' })
+    
     let target = args[0]
-    if (!target) {
-      const quoted = msg.message?.extendedTextMessage?.contextInfo?.participant
-      if (quoted) target = quoted.split('@')[0]
-      else return sock.sendMessage(from, { text: '❌ Tag or reply to user' }, { quoted: msg })
+    if (msg.message?.extendedTextMessage?.contextInfo?.mentionedJid) {
+      target = msg.message.extendedTextMessage.contextInfo.mentionedJid[0]
     }
-    target = target.replace(/[^0-9]/g, '') + '@s.whatsapp.net'
+    
+    if (!target) return sock.sendMessage(from, { text: '❌ Tag the member to demote!' })
+    
     await sock.groupParticipantsUpdate(from, [target], 'demote')
-    await sock.sendMessage(from, { text: `✅ Demoted @${target.split('@')[0]}` }, { quoted: msg })
+    await sock.sendMessage(from, { text: `✅ @${target.split('@')[0]} _HAS NO LONGER THE GROUP CHARGE_`, mentions: [target] })
   }
 }
