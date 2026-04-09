@@ -1,15 +1,14 @@
-const axios = require('axios')
-
 module.exports = {
   name: 'dl',
   alias: [
     'download', 'vid', 'video',
     'yt', 'youtube', 'ytmp4', 'ytvideo',
     'ig', 'instagram', 'insta', 'igdl',
-    'tt', 'tiktok', 'tik tok',
-    'fb', 'facebook', 'meta',
-    'tw', 'twitter', 'x',
-    'pin', 'pinterest', 'pt'
+    'tt', 'tiktok', 'tiktokdl',
+    'fb', 'facebook', 'meta', 'fbdl',
+    'tw', 'twitter', 'x', 'twitdl',
+    'pin', 'pinterest', 'pt', 'pindl',
+    'sc', 'snapchat', 'likee', 'reddit', 'rd'
   ],
   category: 'media',
   desc: 'Download videos from YouTube, Instagram, TikTok, Facebook, Twitter, Pinterest & more',
@@ -18,15 +17,15 @@ module.exports = {
     
     if (!args.length) {
       await sock.sendMessage(from, { 
-        text: `❌ *Usage:* .dl [URL]\n\n*Examples:*\n📹 .dl https://youtu.be/xxxxx\n📸 .dl https://instagram.com/p/xxxxx\n🎵 .dl https://tiktok.com/@user/video/xxxxx` 
+        text: `❌ *Usage:* .dl [URL]\n\n*Examples:*\n🎬 .dl https://youtu.be/xxxxx\n📸 .dl https://instagram.com/p/xxxxx\n🎵 .dl https://tiktok.com/@user/video/xxxxx\n📘 .dl https://facebook.com/watch?v=xxxxx\n🐦 .dl https://twitter.com/user/status/xxxxx\n📌 .dl https://pinterest.com/pin/xxxxx` 
       })
       return
     }
 
     const url = args[0]
     
-    // Detect platform
-    let platformEmoji = '📥'
+    // Detect platform with better emojis
+    let platformEmoji = '🌐'
     let platformName = 'Media'
     
     if (url.includes('youtu.be') || url.includes('youtube.com')) {
@@ -43,10 +42,19 @@ module.exports = {
       platformName = 'Facebook'
     } else if (url.includes('twitter.com') || url.includes('x.com')) {
       platformEmoji = '🐦'
-      platformName = 'Twitter'
+      platformName = 'Twitter/X'
     } else if (url.includes('pinterest.com') || url.includes('pin.it')) {
       platformEmoji = '📌'
       platformName = 'Pinterest'
+    } else if (url.includes('snapchat.com')) {
+      platformEmoji = '👻'
+      platformName = 'Snapchat'
+    } else if (url.includes('likee.com')) {
+      platformEmoji = '🎭'
+      platformName = 'Likee'
+    } else if (url.includes('reddit.com')) {
+      platformEmoji = '🤖'
+      platformName = 'Reddit'
     }
     
     await sock.sendMessage(from, { 
@@ -54,78 +62,62 @@ module.exports = {
     })
 
     try {
-      // Fetch download links from API
       const apiUrl = `https://batgpt.vercel.app/api/alldl?url=${encodeURIComponent(url)}`
       console.log('[DL] Fetching:', apiUrl)
       
       const response = await fetch(apiUrl)
       const data = await response.json()
       
-      console.log('[DL] API Response:', JSON.stringify(data, null, 2))
+      console.log('[DL] Success:', data.success)
 
       if (!data.success) {
         throw new Error(data.message || 'Could not fetch media')
       }
 
-      const downloadLinks = data.links || []
-      
-      if (downloadLinks.length === 0) {
-        throw new Error('No download links found')
-      }
-
-      // Resolve tiny URLs to actual video URLs
+      // ✅ FIX: Get video URL from mediaInfo (not links array)
       let videoUrl = null
-      for (const link of downloadLinks) {
-        try {
-          console.log('[DL] Resolving link:', link)
-          
-          // Follow redirects to get actual video URL
-          const resolved = await axios.get(link, {
-            maxRedirects: 5,
-            timeout: 10000,
-            responseType: 'arraybuffer'
-          })
-          
-          // Check if it's a video
-          const contentType = resolved.headers['content-type']
-          if (contentType && contentType.includes('video')) {
-            videoUrl = link
-            console.log('[DL] Found video URL:', videoUrl)
-            break
-          }
-          
-          // Try to get the final URL after redirects
-          if (resolved.request && resolved.request.res && resolved.request.res.responseUrl) {
-            videoUrl = resolved.request.res.responseUrl
-            console.log('[DL] Resolved URL:', videoUrl)
-            break
-          }
-        } catch (resolveErr) {
-          console.log('[DL] Failed to resolve:', resolveErr.message)
-          continue
-        }
+      let title = 'Video'
+      
+      if (data.mediaInfo && data.mediaInfo.videoUrl) {
+        videoUrl = data.mediaInfo.videoUrl
+        title = data.mediaInfo.title || `${platformName} Video`
+        console.log('[DL] Found videoUrl in mediaInfo')
+      } else if (data.videoUrl) {
+        videoUrl = data.videoUrl
+        console.log('[DL] Found videoUrl directly')
+      } else if (data.links && data.links.length > 0) {
+        // Fallback to links if needed
+        videoUrl = data.links[0]
+        console.log('[DL] Using fallback link')
       }
-
+      
       if (!videoUrl) {
-        // If can't resolve, use the first link as is
-        videoUrl = downloadLinks[0]
+        throw new Error('No video URL found')
       }
 
       // Download the video as buffer
-      console.log('[DL] Downloading video from:', videoUrl)
-      const videoResponse = await axios.get(videoUrl, {
-        responseType: 'arraybuffer',
-        timeout: 60000,
-        maxRedirects: 5
+      console.log('[DL] Downloading from:', videoUrl.substring(0, 100) + '...')
+      const videoResponse = await fetch(videoUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
       })
       
-      const videoBuffer = Buffer.from(videoResponse.data)
+      const videoBuffer = Buffer.from(await videoResponse.arrayBuffer())
       console.log('[DL] Video size:', videoBuffer.length, 'bytes')
 
-      // Send the video
+      if (videoBuffer.length < 5000) {
+        throw new Error('Downloaded file too small')
+      }
+
+      // Send as document with proper mimetype (more reliable than video)
+      const mimetype = videoResponse.headers.get('content-type') || 'video/mp4'
+      
       await sock.sendMessage(from, {
-        video: videoBuffer,
-        caption: `${platformEmoji} *${platformName} Download Complete!*\n\n📥 *Size:* ${(videoBuffer.length / 1024 / 1024).toFixed(2)} MB\n📱 *Platform:* ${platformName}\n\n> PRECIOUS-MD BOT`
+        document: videoBuffer,
+        mimetype: mimetype,
+        fileName: `${title.replace(/[^a-zA-Z0-9]/g, '_')}.mp4`,
+        caption: `${platformEmoji} *${platformName} Download Complete!*\n\n📌 *Title:* ${title}\n📦 *Size:* ${(videoBuffer.length / 1024 / 1024).toFixed(2)} MB\n\n> PRECIOUS-MD BOT`
       })
       
       console.log('[DL] Video sent successfully!')
@@ -134,12 +126,12 @@ module.exports = {
       console.error('[DL] Error:', err.message)
       
       let errorMsg = `❌ *Download Failed!*\n\n`
-      errorMsg += `Platform: ${platformName}\n`
-      errorMsg += `Error: ${err.message}\n\n`
+      errorMsg += `${platformEmoji} *Platform:* ${platformName}\n`
+      errorMsg += `⚠️ *Error:* ${err.message}\n\n`
       errorMsg += `*Tips:*\n`
-      errorMsg += `• Try the URL directly in browser\n`
-      errorMsg += `• Some videos may be private\n`
+      errorMsg += `• Make sure the URL is correct\n`
       errorMsg += `• Try a different video\n`
+      errorMsg += `• Some videos may be private or deleted\n`
       
       await sock.sendMessage(from, { text: errorMsg })
     }
