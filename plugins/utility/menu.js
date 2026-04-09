@@ -24,14 +24,29 @@ module.exports = {
 ┃ .menu      - Show menu
 ┃ .about     - Bot info
 ┃ .owner     - Owner contact
+┃ .repo      - GitHub repo
+┃ .status    - Bot stats
 ┗━━━━━━━━━━━━━━━━━━━━━━━┛
 
-┏━━━━━━━ *🎵 MEDIA* ━━━━━━━┓
+┏━━━━━━━ *🎵 DOWNLOADERS* ━━━━━━━┓
+┃ .dl        - Any platform
+┃ .yt        - YouTube video
+┃ .ytmp3     - YouTube MP3
+┃ .ig        - Instagram video
+┃ .tt        - TikTok video
+┃ .fb        - Facebook video
+┃ .tw        - Twitter video
+┃ .pin       - Pinterest video
+┃ .sc        - Snapchat video
+┃ .likee     - Likee video
+┃ .reddit    - Reddit video
+┗━━━━━━━━━━━━━━━━━━━━━━━┛
+
+┏━━━━━━━ *🎨 MEDIA* ━━━━━━━┓
 ┃ .sticker   - Image to sticker
 ┃ .toimg     - Sticker to image
 ┃ .tourl     - Upload to URL
-┃ .dl        - Download video
-┃ .ytmp3     - YouTube to MP3
+┃ .img       - Google images
 ┗━━━━━━━━━━━━━━━━━━━━━━━┛
 
 ┏━━━━━━━ *👥 GROUP* ━━━━━━━┓
@@ -40,8 +55,12 @@ module.exports = {
 ┃ .goodbye   - Toggle goodbye
 ┃ .antilink  - Toggle anti-link
 ┃ .kick      - Remove member
+┃ .add       - Add member
 ┃ .promote   - Make admin
 ┃ .demote    - Remove admin
+┃ .mute      - Mute group
+┃ .poll      - Create poll
+┃ .warn      - Warn member
 ┗━━━━━━━━━━━━━━━━━━━━━━━┛
 
 ┏━━━━━━━ *🤖 AI* ━━━━━━━┓
@@ -49,6 +68,8 @@ module.exports = {
 ┃ .imagine   - Generate image
 ┃ .tts       - Text to speech
 ┃ .translate - Translate text
+┃ .roast     - Roast someone
+┃ .summary   - Summarize text
 ┗━━━━━━━━━━━━━━━━━━━━━━┛
 
 ┏━━━━━━━ *🎮 GAMES* ━━━━━━━┓
@@ -57,20 +78,35 @@ module.exports = {
 ┃ .truth     - Truth question
 ┃ .dare      - Dare challenge
 ┃ .rps       - Rock paper scissors
+┃ .tictactoe - TicTacToe
+┃ .hangman   - Hangman game
+┃ .8ball     - Magic 8 ball
+┃ .coin      - Flip coin
+┗━━━━━━━━━━━━━━━━━━━━━━━┛
+
+┏━━━━━━━ *⚙️ AUTOMATION* ━━━━━━━┓
+┃ .autoreact  - Auto reaction
+┃ .autorespond- Auto response
+┃ .autoview   - Auto status view
+┃ .reminder   - Set reminder
 ┗━━━━━━━━━━━━━━━━━━━━━━━┛
 
 ┏━━━━━━━ *👑 OWNER* ━━━━━━━┓
 ┃ .broadcast - Broadcast message
-┃ .sessions  - Manage sessions
+┃ .sessions  - List sessions
 ┃ .restart   - Restart bot
 ┃ .logs      - View logs
+┃ .update    - Update bot
+┃ .backup    - Backup data
 ┗━━━━━━━━━━━━━━━━━━━━━━━┛
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 📌 *Example:* .ping
-💡 *Support:* @owner
+💡 *Download:* .dl [URL]
+🎵 *Audio:* .ytmp3 [URL]
 📦 *PRECIOUS-MD v3.0*
-━━━━━━━━━━━━━━━━━━━━━━━━`
+━━━━━━━━━━━━━━━━━━━━━━━━
+> BY M U D A S S A R `
 
     // Try to send with image
     const imagePath = path.join(__dirname, '../../audio/menu.png')
