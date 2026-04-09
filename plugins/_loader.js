@@ -56,7 +56,23 @@ async function handleIncomingMessage(sock, msg, sessionMap) {
     const from = msg.key.remoteJid
     const sender = (msg.key.participant || msg.key.remoteJid || '').replace('@s.whatsapp.net', '')
     
-    // ✅ ADDED: AutoReact feature (reacts to ALL messages, even non-commands)
+    // ✅ CHECK FOR MENTIONS - Send audio when bot is mentioned (only in groups)
+    try {
+      const botNumber = sock.user.id.split(':')[0]
+      const mentionedJids = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || []
+      const isMentioned = body.includes(`@${botNumber}`) || mentionedJids.includes(`${botNumber}@s.whatsapp.net`)
+      
+      if (isMentioned && from.endsWith('@g.us')) {
+        const mention = require('../plugins/automation/mention')
+        if (mention.handleMention) {
+          await mention.handleMention(sock, msg, from, sender, botNumber)
+        }
+      }
+    } catch (err) {
+      console.log('[MENTION] Error:', err.message)
+    }
+    
+    // ✅ AutoReact feature (reacts to ALL messages, even non-commands)
     try {
       const sessionNumber = sessionMap ? [...sessionMap.keys()][0] : null
       if (sessionNumber) {
@@ -97,7 +113,7 @@ async function handleIncomingMessage(sock, msg, sessionMap) {
       await reactToMessage(sock, msg, command.reactEmoji)
     }
 
-    // ✅ FIXED: Execute command (supports both 'execute' and 'exec')
+    // Execute command (supports both 'execute' and 'exec')
     try {
       const cmdFunc = command.execute || command.exec
       if (!cmdFunc) {
