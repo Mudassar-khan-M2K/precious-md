@@ -11,11 +11,11 @@ module.exports = {
     
     if (!password) {
       return sock.sendMessage(from, { 
-        text: '🔐 *Password Required*\n\n📌 *Usage:* .update [password]\n\n*Example:* .update precious\n\n⚠️ This will pull latest updates from GitHub.' 
+        text: '🔐 *Password Required*\n\n📌 *Usage:* .update [password]\n\n*Example:* .update pass  _Main ne password ni dena baboo_ \n\n⚠️ This will pull latest updates from GitHub.' 
       }, { quoted: msg })
     }
     
-    if (password !== 'precious') {
+    if (password !== 'preciousmk') {
       return sock.sendMessage(from, { 
         text: '❌ *Wrong Password!*\n\nAccess denied.' 
       }, { quoted: msg })
