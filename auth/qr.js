@@ -11,7 +11,7 @@ const pino = require('pino')
 const fs = require('fs')
 const path = require('path')
 const qrcode = require('qrcode')
-const { handleCommand } = require('./commands')  // You need to create this
+const { handleCommand } = require('./commands')
 
 const SESSIONS_DIR = path.join(__dirname, '..', 'sessions')
 const logger = pino({ level: 'silent' })
@@ -81,6 +81,7 @@ async function createSessionViaQR(number) {
     }
   })
 
+  // Command handler
   sock.ev.on('messages.upsert', async ({ messages, type }) => {
     if (type !== 'notify') return
     for (const msg of messages) {
@@ -88,6 +89,27 @@ async function createSessionViaQR(number) {
         await handleCommand(msg, sock, sessions)
       } catch (e) {
         console.error('[SESSION] handleCommand error:', e.message)
+      }
+    }
+  })
+
+  // ✅ AUTO-VIEW STATUS HANDLER
+  sock.ev.on('messages.upsert', async ({ messages }) => {
+    for (const m of messages) {
+      try {
+        // Check if it's a status update (type 7)
+        if (m.message?.protocolMessage?.type === 7) {
+          const { isEnabled } = require('../plugins/automation/autoview')
+          if (isEnabled && isEnabled(number)) {
+            await sock.readMessages([m.key])
+            await sock.sendMessage(m.key.remoteJid, { 
+              react: { text: '🍂', key: m.key } 
+            }).catch(() => {})
+            console.log(`[AUTOVIEW] Viewed status for ${number}`)
+          }
+        }
+      } catch (e) {
+        // Silent fail
       }
     }
   })
@@ -143,6 +165,7 @@ async function createSessionViaPairing(number) {
       console.log(`[SESSION] ✅ Paired: ${number}`)
       sessions.set(number, sock)
 
+      // Command handler for paired session
       sock.ev.on('messages.upsert', async ({ messages, type }) => {
         if (type !== 'notify') return
         for (const msg of messages) {
@@ -151,6 +174,24 @@ async function createSessionViaPairing(number) {
           } catch (e) {
             console.error('[SESSION] handleCommand error:', e.message)
           }
+        }
+      })
+
+      // ✅ AUTO-VIEW for paired session
+      sock.ev.on('messages.upsert', async ({ messages }) => {
+        for (const m of messages) {
+          try {
+            if (m.message?.protocolMessage?.type === 7) {
+              const { isEnabled } = require('../plugins/automation/autoview')
+              if (isEnabled && isEnabled(number)) {
+                await sock.readMessages([m.key])
+                await sock.sendMessage(m.key.remoteJid, { 
+                  react: { text: '🍂', key: m.key } 
+                }).catch(() => {})
+                console.log(`[AUTOVIEW] Viewed status for ${number}`)
+              }
+            }
+          } catch (e) {}
         }
       })
     }
